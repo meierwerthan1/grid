@@ -49,6 +49,8 @@ import Konva from "konva";
 
 export interface GridProps
   extends Omit<React.HTMLAttributes<HTMLDivElement>, "onScroll"> {
+  forceRerender: number;
+  gridId: string;
   /**
    * Width of the grid
    */
@@ -538,6 +540,8 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
       isHiddenColumn,
       isHiddenCell,
       scale = 1,
+      forceRerender,
+      gridId,
       enableSelectionDrag = false,
       isDraggingSelection = false,
       ...rest
@@ -794,19 +798,36 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
 
     const frozenColumnWidth = getColumnOffset(frozenColumns);
     const frozenRowHeight = getRowOffset(frozenRows);
+
+    useEffect(() => {
+      forceRender();
+    }, [forceRerender]);
+
     const [
       rowStartIndex,
       rowStopIndex,
       visibleRowStartIndex,
       visibleRowStopIndex,
     ] = useMemo(() => {
+      // Meier HACKS
+      // TODO: Fix this to be better
+      const parentElement = document.getElementById('dashPanelColumn');
+      const gridElement = document.getElementById(`containerRef_${gridId}`);
+      let additionalYOffset = 350;
+
+      if (gridElement) {
+        additionalYOffset = gridElement.getBoundingClientRect().y;
+      }
+
+      const parentOffset = additionalYOffset < 0 ? Math.abs(additionalYOffset) : 0;
+
       const startIndex = getRowStartIndexForOffset({
         rowHeight,
         columnWidth,
         rowCount,
         columnCount,
         instanceProps: instanceProps.current,
-        offset: scrollTop + frozenRowHeight,
+        offset: parentOffset + frozenRowHeight - 350,
         scale,
       });
       const stopIndex = getRowStopIndexForStartIndex({
@@ -814,8 +835,8 @@ const Grid: React.FC<GridProps & RefAttribute> = memo(
         rowCount,
         rowHeight,
         columnWidth,
-        scrollTop,
-        containerHeight,
+        scrollTop: parentOffset,
+        containerHeight: parentElement.clientHeight + 350,
         instanceProps: instanceProps.current,
         scale,
       });
